@@ -13,11 +13,15 @@ import soundfile as sf
 import numpy as np
 import pandas as pd
 
-# asdasd
+# ----------- Configuration -----------
+# The maximum multiplier allowed for the volumed to be normalized to 1.0
 NORMALIZATION_FACTOR_THRESHOLD = 50
+# The sample rate which the model needs to work properly
 TARGET_SAMPLE_RATE = 16000
+# The max "energy" of an audio to be considered silence
 SILENCE_THESHOLD = 0.2
 OUTPUT_FOLDER = '.\\generated_data'
+# The max allowed fraction of an audio file clipped samples (e.g 0.15/1 of the audio is at maximum/minimun energy)
 CLIPPED_PERCENTAGE_THRESHOLD = 0.15
 # The fields by which the dataset will be ordered and selected.
 # Age should be last (as it's a numeric field, see implementation of _find_similar_people_to_person)
