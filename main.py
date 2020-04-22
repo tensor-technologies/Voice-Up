@@ -16,7 +16,9 @@ import pandas as pd
 # ----------- Configuration -----------
 # The maximum multiplier allowed for the volumed to be normalized to 1.0
 NORMALIZATION_FACTOR_THRESHOLD = 50
-# The sample rate which the model needs to work properly
+APPLY_VAD_AND_RESAMPLING_TO_OUTPUT = False
+#  The sample rate which the model needs to work properly
+# *relevant only with APPLY_VAD_AND_RESAMPLING_TO_OUTPUT=true*
 TARGET_SAMPLE_RATE = 16000
 # The max "energy" of an audio to be considered silence
 SILENCE_THESHOLD = 0.2
@@ -26,6 +28,20 @@ CLIPPED_PERCENTAGE_THRESHOLD = 0.15
 # The fields by which the dataset will be ordered and selected.
 # Age should be last (as it's a numeric field, see implementation of _find_similar_people_to_person)
 KEY_FIELDS = ['formData.gender', 'formData.smokingHabits', 'formData.country', 'formData.age']
+# Create a summary Excel file
+CREATE_XLS_FILE = True
+# Copy the files to the output folder
+COPY_FILES_TO_DEDICATED_FOLDER = True
+
+def preprocess_wav(data, rate, th=SILENCE_THESHOLD):
+	data = data / np.max(np.abs(data))
+	start = np.argmax(np.abs(data) > th)
+	end = len(data) - np.argmax(data[::-1] > th)
+	# Add a little buffer at start & end
+	start = max(0, start - int(rate * 0.2))
+	end = end + int(rate * 0.2)
+
+	return data[start:end]
 
 def copy_wav_and_change_rate(input_filepath, output_filepath, target_sample_rate):
 	with wave.open(input_filepath, 'r') as input_wav:
@@ -33,10 +49,16 @@ def copy_wav_and_change_rate(input_filepath, output_filepath, target_sample_rate
 		audioData = input_wav.readframes(n_frames)
 		originalRate = input_wav.getframerate()
 		with wave.open(output_filepath, 'w') as output_wav:
+			final_sr = originalRate if target_sample_rate == None else target_sample_rate
 			output_wav.setnchannels(1)
-			output_wav.setparams((1, 2, target_sample_rate, 0, 'NONE', 'Uncompressed'))
-			converted = audioop.ratecv(audioData, 2, 1, originalRate, target_sample_rate, None)
+			output_wav.setparams((1, 2, final_sr, 0, 'NONE', 'Uncompressed'))
+			converted = audioop.ratecv(audioData, 2, 1, originalRate, final_sr, None)
 			output_wav.writeframes(converted[0])
+	
+	if APPLY_VAD_AND_RESAMPLING_TO_OUTPUT:
+		wav, rate = sf.read(output_filepath)
+		wav = preprocess_wav(wav, rate)
+		sf.write(output_filepath, wav, rate)
 
 # def _get_max_consecutive_true(arr):
 # 	max_seq = 0
@@ -97,12 +119,9 @@ def _is_a_valid_recording(wav_path_or_filelike):
 	normalization_factor = 1.0 / np.max(np.abs(wav))
 	if normalization_factor > NORMALIZATION_FACTOR_THRESHOLD:
 		return (False, 'Volume too low')
-	wav_normliazed = wav * normalization_factor
 
 	# Cut silence in the start & end.
-	start = np.argmax(wav_normliazed > SILENCE_THESHOLD)
-	end = len(wav_normliazed) - np.argmax(wav_normliazed[::-1] > SILENCE_THESHOLD)
-	wav_normliazed = wav_normliazed[start:end]
+	wav_normliazed = preprocess_wav(wav, rate)
 
 	if len(wav_normliazed) / rate <= 0.2 * 0.001:
 		return (False, 'Too short')
@@ -244,8 +263,7 @@ def generate_dataset_for_model(args):
 		print("\t%s" % id)
 
 	os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-	create_xls_file = True
-	if create_xls_file:
+	if CREATE_XLS_FILE:
 		name = os.path.join(OUTPUT_FOLDER, 'submissions_output.xlsx')
 		print ('Outputing summary to', name)
 		with pd.ExcelWriter(name) as writer:
@@ -253,12 +271,11 @@ def generate_dataset_for_model(args):
 			control_group.to_excel(writer, sheet_name='Control group')
 
 	# Copy files to seperate dataset
-	copy_files_to_dedicated_folder = True
-	if copy_files_to_dedicated_folder:
+	if COPY_FILES_TO_DEDICATED_FOLDER:
 		src_root = os.path.join(dataset_root, 'data') if dataset_root.endswith('.zip') else dataset_root
 		dst_root = OUTPUT_FOLDER
 		# call copy_wav_and_change_rate with the sample-rate parameter set
-		copy_function = partial(copy_wav_and_change_rate, target_sample_rate=TARGET_SAMPLE_RATE)
+		copy_function = partial(copy_wav_and_change_rate, target_sample_rate=(TARGET_SAMPLE_RATE if APPLY_VAD_AND_RESAMPLING_TO_OUTPUT else None))
 
 		print('Copying files to %s' % dst_root)
 
