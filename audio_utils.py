@@ -9,20 +9,27 @@ CLIPPED_PERCENTAGE_THRESHOLD = 0.15
 NORMALIZATION_FACTOR_THRESHOLD = 50
 
 def preprocess_wav(data, rate, th=SILENCE_THESHOLD):
+	# Normalize (makes max amplitude scale to 1.0)
 	data = data / np.max(np.abs(data))
+
 	start = np.argmax(np.abs(data) > th)
 	end = len(data) - np.argmax(data[::-1] > th)
+
 	# Add a little buffer at start & end
 	start = max(0, start - int(rate * 0.2))
 	end = end + int(rate * 0.2)
 
 	return data[start:end]
 
-def load_recording_if_valid(wav_path):
+def load_recording_if_valid(wav_path, vad_and_normalization):
 	try:
 		wav, rate = sf.read(wav_path)
 	except RuntimeError:
 		return np.nan, np.nan
+	
+	if vad_and_normalization:
+		wav = preprocess_wav(wav, rate)
+
 	is_valid, reason = _is_a_valid_recording(wav, rate)
 	if is_valid:
 		return wav, rate

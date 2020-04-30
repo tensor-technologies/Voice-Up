@@ -15,7 +15,7 @@ import pandas as pd
 
 import audio_utils
 import utils
-import opensmile
+from opensmile import opensmile
 import swifter
 
 # ----------- Configuration -----------
@@ -54,27 +54,37 @@ class VoiceUp:
 			return recording_path
 		return np.nan
 
-	def load_recordings_data(self, recording_name):
+	def load_recordings_data(self, recording_name, vad_and_normalization=True):
+		"""
+		Loads the raw data (and rate) of the given recording to the current df.
+		vad_and_normalization -> Cut start & end silence (with 200ms buffer), and normalize amplitudes.
+		e.g : load_recordings_data('cough') -> Adds "recordings.cough.data" & "recordings.cough.rate"
+		"""
 		col_name = 'recordings.%s' % recording_name
 		assert col_name in self.df.columns, "Column %s not in df" % col_name
 
 		counter = utils.Counter(len(self.df))
 		def do_apply(row):
 			counter.increment()
-			return audio_utils.load_recording_if_valid(os.path.join(self.dataset_root, row['_id'], '%s.wav' % recording_name))
+			return audio_utils.load_recording_if_valid(os.path.join(self.dataset_root, row['_id'], '%s.wav' % recording_name), vad_and_normalization)
 		
 		# Create 2 new columns for recording type (e.g 'recordings.cough.data', 'recordings.cough.rate')
 		self.df[col_name + '.data'], self.df[col_name + '.rate'] = zip(*self.df.apply(do_apply, axis=1))
 	
 	def load_functionals(self, recording_name):
+		"""
+		Loads the functionals features of the <recording_name> to the current df.
+		* This processes every recording seperatly, so it might take some time.
+		** Nan rows won't be processed
+		"""
 		col_name = 'recordings.%s' % recording_name
 		assert col_name in self.df.columns, "Column %s not in df" % col_name
-
+		assert self.df[col_name].dropna().any(), 'Column %s is all nans (or no rows)' % col_name
 		# counter = utils.Counter(len(self.df[col_name].dropna()))
 		def do_apply(wavfile):
 			# counter.increment()
-			return opensmile.opensmile.get_functionals(wavfile)
-
+			return opensmile.get_functionals(wavfile)
+		
 		functionals_df = self.df[col_name].dropna().swifter.apply(do_apply)
 
 		# A trick to add functionals_df to main df (or update the values)

@@ -28,13 +28,17 @@ class Person:
 
 	def _load_df_to_self(self):
 		for key in self._raw.keys():
-			name = key.replace('.', '_')
+			name = key.replace('.', '_').replace('-', '_')
 			val = self._raw[key]
-
+			
 			self.__setattr__(name, val)
 		
 
 	def load_recording(self, recording_type='cough'):
+		"""
+		Loads recording data & functionals to the current object
+		Can be accessed as normal attributes. e.g person.F0_sma_de_linregc1
+		"""
 		self._voiceup.load_recordings_data(recording_type)
 		self._voiceup.load_functionals(recording_type)
 		self._load_df_to_self()

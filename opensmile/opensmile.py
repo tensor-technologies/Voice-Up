@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import arff
-import HTK
+
+from . import HTK
 dirname = os.path.dirname(__file__)
 
 # Hack to allow arff to be able to read unknown attribute
