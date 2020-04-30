@@ -34,8 +34,11 @@ def _run_opensmile(conf_file, input_file, lld_output=False):
 	assert res == 0
 
 	output = ''
-	with open(output_file, 'rb') as fileobj:
-		output = fileobj.read()
+	if lld_output:
+		output = lld_output_file
+	else:
+		with open(output_file, 'rb') as fileobj:
+			output = fileobj.read()
 	return output
 
 def _csv_to_array(csv_data):
@@ -55,9 +58,11 @@ def get_mfcc(wavfile):
 	return np.array(htk.data)
 
 def get_lld(wavfile):
-	_run_opensmile('config\\avec2013.conf', wavfile, lld_output=True)
-	lld_output_file = os.path.join(dirname, 'output_lld.csv')
-	return _csv_to_df(lld_output_file)
+	lld_output_file = _run_opensmile('config\\avec2013.conf', wavfile, lld_output=True)
+	
+	df = _csv_to_df(lld_output_file)
+	df = df.drop(['name','frameTime'], axis=1)
+	return df
 
 def get_functionals(wavfile):
 	res = _run_opensmile('config\\emobase.conf', wavfile)
