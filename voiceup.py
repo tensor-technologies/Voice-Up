@@ -58,9 +58,9 @@ class VoiceUp:
 		"""
 		Loads the raw data (and rate) of the given recording to the current df.
 		vad_and_normalization -> Cut start & end silence (with 200ms buffer), and normalize amplitudes.
-		e.g : load_recordings_data('cough') -> Adds "recordings.cough.data" & "recordings.cough.rate"
+		e.g : load_recordings_data('cough') -> Adds "cough.data" & "cough.rate"
 		"""
-		col_name = 'recordings.%s' % recording_name
+		col_name = '%s' % recording_name
 		assert col_name in self.df.columns, "Column %s not in df" % col_name
 
 		counter = utils.Counter(len(self.df))
@@ -86,6 +86,10 @@ class VoiceUp:
 			return opensmile.get_functionals(wavfile)
 		
 		functionals_df = self.df[col_name].dropna().swifter.apply(do_apply)
+
+		# Add prefix to the column names (F0_sma_amean -> cough.F0_sma_amean)
+		rename_map = { c : '%s.%s' % (recording_name, c) for c in functionals_df.columns.tolist() }
+		functionals_df = functionals_df.rename(columns=rename_map)
 
 		# A trick to add functionals_df to main df (or update the values)
 		self.df[functionals_df.columns] = functionals_df

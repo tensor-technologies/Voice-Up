@@ -32,6 +32,8 @@ KEY_FIELDS = ['formData.gender', 'formData.smokingHabits', 'formData.country', '
 CREATE_XLS_FILE = True
 # Copy the files to the output folder
 COPY_FILES_TO_DEDICATED_FOLDER = True
+# Output json (submissions like) files of the 2 groups (positives & control group)
+CREATE_GROUP_JSONS = True
 
 def preprocess_wav(data, rate, th=SILENCE_THESHOLD):
 	data = data / np.max(np.abs(data))
@@ -161,17 +163,22 @@ def _filter_nan_people_and_normalize(df, match_fields):
 	print('Dropped %d people with no recordings' % len(df[no_recordings_inds]))
 	df = df[~no_recordings_inds]
 
+	df['formData.age'] = pd.to_numeric(df['formData.age'], errors='coerce')
+
 	# drop rows with missing match fields and address specific fields issues
 	for mf in match_fields:
 		df = df[df[mf].notna()]
 
-		if mf == 'formData.gender':
-			df = df[df[mf] != 'Other']
-		elif mf == 'formData.smokingHabits':
-			df[mf].replace("I've used to smoke", 'I used to smoke', inplace=True)
-		elif mf == 'formData.age':
-			df = df[(df[mf] > 0) & (df[mf] < 120)]
-
+		try:
+			if mf == 'formData.gender':
+				df = df[df[mf] != 'Other']
+			elif mf == 'formData.smokingHabits':
+				df[mf].replace("I've used to smoke", 'I used to smoke', inplace=True)
+			elif mf == 'formData.age':
+				df = df[(df[mf] > 0) & (df[mf] < 120)]
+		except Exception as e:
+			print('Error processing field', mf, 'on values', df[mf])
+			raise e
 	return df
 
 def _find_similar_people_to_person(person_row, df, key_fields):
@@ -269,6 +276,10 @@ def generate_dataset_for_model(args):
 		with pd.ExcelWriter(name) as writer:
 			df_pos.to_excel(writer, sheet_name='Positive')
 			control_group.to_excel(writer, sheet_name='Control group')
+	
+	if CREATE_GROUP_JSONS:
+		df_pos.to_json(os.path.join(OUTPUT_FOLDER, 'positives.json'), orient='records')
+		control_group.to_json(os.path.join(OUTPUT_FOLDER, 'controlgroup.json'), orient='records')
 
 	# Copy files to seperate dataset
 	if COPY_FILES_TO_DEDICATED_FOLDER:
