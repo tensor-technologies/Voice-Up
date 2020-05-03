@@ -9,7 +9,7 @@ def main():
 	v = VoiceUp(DATASET_ROOT, limit_rows=100)
 	v.load_recordings_data('cough')
 
-	data = list(zip(v.df['recordings.cough.data'].dropna().tolist(), v.df['recordings.cough.rate'].dropna().tolist(), v.df['recordings.cough'].dropna().tolist()))
+	data = list(zip(v.df['cough.data'].dropna().tolist(), v.df['cough.rate'].dropna().tolist(), v.df['recordings.cough'].dropna().tolist()))
 
 	# Wide raw data analysis
 	for _ in range(5):
@@ -29,9 +29,9 @@ def main():
 	p = Person(v.dataset_root, id='5e730b5d19fe630007a3e97a')
 	p.load_recording('cough')
 	# Not we can access the features as normal attributes
-	print('p.F0_sma_range:', p.F0_sma_range)
-	print('p.F0env_sma_min:', p.F0env_sma_min)
-	print('p.F0env_sma_max:', p.F0env_sma_max)
+	print('p.cough_F0_sma_range:', p.cough_F0_sma_range)
+	print('p.cough_F0env_sma_min:', p.cough_F0env_sma_min)
+	print('p.cough_F0env_sma_max:', p.cough_F0env_sma_max)
 
 
 if __name__ == '__main__':

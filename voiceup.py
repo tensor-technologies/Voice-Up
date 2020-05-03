@@ -61,7 +61,6 @@ class VoiceUp:
 		e.g : load_recordings_data('cough') -> Adds "cough.data" & "cough.rate"
 		"""
 		col_name = '%s' % recording_name
-		assert col_name in self.df.columns, "Column %s not in df" % col_name
 
 		counter = utils.Counter(len(self.df))
 		def do_apply(row):
