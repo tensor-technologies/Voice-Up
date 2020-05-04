@@ -9,7 +9,9 @@ CLIPPED_PERCENTAGE_THRESHOLD = 0.15
 NORMALIZATION_FACTOR_THRESHOLD = 50
 
 def preprocess_wav(data, rate, th=SILENCE_THESHOLD):
-	# Normalize (makes max amplitude scale to 1.0)
+	# Normalizes (makes max amplitude scale to 1.0)
+	if np.count_nonzero(data) == 0:
+		return []
 	data = data / np.max(np.abs(data))
 
 	start = np.argmax(np.abs(data) > th)

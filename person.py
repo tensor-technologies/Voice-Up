@@ -28,10 +28,9 @@ class Person:
 
 	def _load_df_to_self(self):
 		for key in self._raw.keys():
-			name = key.replace('.', '_').replace('-', '_')
 			val = self._raw[key]
 
-			self.__setattr__(name, val)
+			self.__setattr__(key, val)
 		
 
 	def load_recording(self, recording_name='cough', vad_and_normalization=True):
@@ -44,10 +43,10 @@ class Person:
 		self._load_df_to_self()
 
 	def get_lld(self, recording_name='cough'):
-		col_name = 'recordings.%s' % recording_name
+		col_name = 'recordings_%s' % recording_name
 		assert col_name in self._raw.keys(), "Column %s not in df" % col_name
 
-		return opensmile.get_lld(self._raw['recordings.cough'])
+		return opensmile.get_lld(self._raw[col_name])
 
 	def __getitem__(self, item):
          return  self.__getattribute__(item)

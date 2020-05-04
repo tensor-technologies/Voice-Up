@@ -8,7 +8,7 @@ A python library wrapper for the VoiceUp dataset.
 from voiceup import VoiceUp
 v = VoiceUp('D:\\Documents\\Datasets\\voca-corona-dataset-2020-04-10', limit_rows=100)
 v.load_recordings_data('cough')
-random_wav = v.df['cough.data'].dropna().iloc[0]
+random_wav = v.df['cough_data'].dropna().iloc[0]
 plt.plot(random_wav)
 plt.show()
 ```
@@ -16,7 +16,7 @@ plt.show()
 ```python
 v = VoiceUp('D:\\Documents\\Datasets\\voca-corona-dataset-2020-04-10', limit_rows=100)
 v.load_functionals('cough')
-F0_sma_range = v.df['cough.F0_sma_range']
+F0_sma_range = v.df['cough_F0_sma_range']
 # ...
 ```
 

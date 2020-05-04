@@ -9,7 +9,7 @@ def main():
 	v = VoiceUp(DATASET_ROOT, limit_rows=100)
 	v.load_recordings_data('cough')
 
-	data = list(zip(v.df['cough.data'].dropna().tolist(), v.df['cough.rate'].dropna().tolist(), v.df['recordings.cough'].dropna().tolist()))
+	data = list(zip(v.df['cough_data'].dropna().tolist(), v.df['cough_rate'].dropna().tolist(), v.df['recordings_cough'].dropna().tolist()))
 
 	# Wide raw data analysis
 	for _ in range(5):

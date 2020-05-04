@@ -12,13 +12,14 @@ from functools import partial
 import soundfile as sf
 import numpy as np
 import pandas as pd
+# Suppress FutureWarning warnings (of pandas)
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import audio_utils
 import utils
 from opensmile import opensmile
 import swifter
-
-# ----------- Configuration -----------
 
 
 class VoiceUp:
@@ -40,12 +41,17 @@ class VoiceUp:
 			self.df = self.df[self.df['_id'].isin(ids)] 
 		elif limit_rows:
 			self.df = self.df.head(limit_rows)
+		self.flatten_column_names()
 	
+	def flatten_column_names(self):
+		rename_map = { c : c.replace('.', '_').replace('-', '_').replace('[', '_').replace(']', '_') for c in self.df.columns.tolist() }
+		self.df = self.df.rename(columns=rename_map)
+		
 	def _normalize_metadata(self):
 		# Normalize recordings columns (Puts the full local path of the recordings or NAN if not exists)
-		recordings_cols = [ c for c in self.df.columns if c.startswith('recordings.') ]
+		recordings_cols = [ c for c in self.df.columns if c.startswith('recordings') ]
 		for col in recordings_cols:
-			recording_name = '%s.wav' % col.partition('.')[-1]
+			recording_name = '%s.wav' % col.partition('_')[-1]
 			self.df[col] = self.df.apply(lambda row: self._get_recording_of_person(row['_id'], recording_name), axis=1)
 	
 	def _get_recording_of_person(self, id, recording_name):
@@ -62,21 +68,29 @@ class VoiceUp:
 		"""
 		col_name = '%s' % recording_name
 
-		counter = utils.Counter(len(self.df))
 		def do_apply(row):
-			counter.increment()
 			return audio_utils.load_recording_if_valid(os.path.join(self.dataset_root, row['_id'], '%s.wav' % recording_name), vad_and_normalization)
 		
-		# Create 2 new columns for recording type (e.g 'recordings.cough.data', 'recordings.cough.rate')
-		self.df[col_name + '.data'], self.df[col_name + '.rate'] = zip(*self.df.apply(do_apply, axis=1))
-	
+		# Create 2 new columns for recording type (e.g 'recordings.cough.data', 'recordings.cough_rate')
+		self.df[col_name + '_data'], self.df[col_name + '_rate'] = zip(*self.df.swifter.apply(do_apply, axis=1))
+
+	def load_custom_function(self, column_name, custom_function):
+		"""
+		Runs the custom_function on every ROW of the df, and put it in the df[column_name].
+		e.g:
+			def r(row): return random.random()
+			load_custom_function('rand', r)
+			Now we can access the results in df['rand']
+		"""
+		self.df[column_name] = self.df.swifter.apply(custom_function, axis=1)
+
 	def load_functionals(self, recording_name):
 		"""
 		Loads the functionals features of the <recording_name> to the current df.
 		* This processes every recording seperatly, so it might take some time.
 		** Nan rows won't be processed
 		"""
-		col_name = 'recordings.%s' % recording_name
+		col_name = 'recordings_%s' % recording_name
 		assert col_name in self.df.columns, "Column %s not in df" % col_name
 		assert self.df[col_name].dropna().any(), 'Column %s is all nans (or no rows)' % col_name
 		# counter = utils.Counter(len(self.df[col_name].dropna()))
@@ -87,11 +101,13 @@ class VoiceUp:
 		functionals_df = self.df[col_name].dropna().swifter.apply(do_apply)
 
 		# Add prefix to the column names (F0_sma_amean -> cough.F0_sma_amean)
-		rename_map = { c : '%s.%s' % (recording_name, c) for c in functionals_df.columns.tolist() }
+		rename_map = { c : '%s_%s' % (recording_name, c) for c in functionals_df.columns.tolist() }
 		functionals_df = functionals_df.rename(columns=rename_map)
 
 		# A trick to add functionals_df to main df (or update the values)
 		self.df[functionals_df.columns] = functionals_df
+
+		self.flatten_column_names()
 
 
 		
