@@ -170,6 +170,7 @@ def _filter_nan_people_and_normalize(df, match_fields):
 		elif mf == 'formData.smokingHabits':
 			df[mf].replace("I've used to smoke", 'I used to smoke', inplace=True)
 		elif mf == 'formData.age':
+			df = df[df[mf].map(np.isreal)]
 			df = df[(df[mf] > 0) & (df[mf] < 120)]
 
 	return df
